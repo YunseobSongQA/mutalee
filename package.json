@@ -1,0 +1,8 @@
+{
+  "name": "mutalee",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "web-push-neo": "^0.1.2"
+  }
+}

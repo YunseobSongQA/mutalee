@@ -1,0 +1,297 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  line-height: var(--line-height-loose);
+  letter-spacing: var(--letter-spacing-loose);
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-2) var(--space-4);
+}
+
+.app-header {
+  text-align: center;
+  margin-bottom: var(--space-3);
+}
+
+.app-header h1 {
+  font-size: 22px;
+  margin: 0 0 var(--space-1);
+}
+
+.app-header p {
+  margin: 0;
+  font-size: 13px;
+  color: #8a8a8a;
+}
+
+.section-title {
+  font-size: 14px;
+  color: #8a8a8a;
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.culture-card {
+  background: var(--color-sub);
+}
+
+.culture-card .culture-text {
+  font-size: 15px;
+  margin: 0 0 var(--space-1);
+}
+
+.culture-card .culture-source {
+  font-size: 12px;
+  color: #6f6a5c;
+  margin: 0;
+  text-align: right;
+}
+
+.reminder-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.reminder-card.is-due {
+  border: 1px solid var(--color-accent);
+}
+
+.reminder-card .badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-sub);
+  color: var(--color-text);
+}
+
+.reminder-card.is-due .badge {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.reminder-body {
+  flex: 1;
+}
+
+.reminder-body h3 {
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+
+.reminder-body p {
+  font-size: 13px;
+  margin: 0 0 6px;
+  color: #555;
+}
+
+.reminder-meta {
+  font-size: 11px;
+  color: #999;
+}
+
+.reminder-actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.reminder-actions button {
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+}
+
+.reminder-actions button:hover {
+  color: var(--color-text);
+}
+
+.empty-note {
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+  padding: var(--space-3) 0;
+}
+
+.notice-banner {
+  background: var(--color-sub);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  font-size: 12px;
+  margin-bottom: var(--space-3);
+  color: #6f6a5c;
+}
+
+.notice-status {
+  margin: 0;
+  font-weight: bold;
+}
+
+.notice-sub {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #8a8578;
+}
+
+.notice-banner button {
+  display: block;
+  margin-top: var(--space-1);
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.toggle-switch {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  background: #ddd;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-switch.on {
+  background: var(--color-accent);
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s ease;
+}
+
+.toggle-switch.on::after {
+  left: 18px;
+}
+
+form.rule-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+form.rule-form label {
+  font-size: 12px;
+  color: #777;
+  display: block;
+  margin-bottom: 2px;
+}
+
+form.rule-form input[type="text"],
+form.rule-form input[type="time"],
+form.rule-form select,
+form.rule-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-sub);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 13px;
+  background: var(--color-bg);
+}
+
+.day-presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.day-preset-btn {
+  border: 1px solid var(--color-sub);
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.day-checkboxes {
+  display: flex;
+  gap: 4px;
+}
+
+.day-checkboxes label {
+  flex: 1;
+  text-align: center;
+  border: 2px solid var(--color-sub);
+  border-radius: var(--radius-md);
+  padding: 6px 0;
+  font-size: 12px;
+  cursor: pointer;
+  background: #fff;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+.day-checkboxes input {
+  display: none;
+}
+
+.day-checkboxes label:has(input:checked) {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.day-checkboxes label:has(input:checked) span {
+  color: #fff;
+  font-weight: bold;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 13px;
+  margin-bottom: var(--space-2);
+}
+
+.profile-row input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--color-sub);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+}

@@ -1,0 +1,8 @@
+name = "mutalee"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "."
+
+# worker/wrangler.toml과 반드시 같은 id를 써야 한다.
+[[kv_namespaces]]
+binding = "MUTALEE_KV"
+id = "a4045345a6c640e196824641af946c6c"

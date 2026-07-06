@@ -1,0 +1,6 @@
+[
+  { "id": "mental", "label": "정신건강" },
+  { "id": "stock", "label": "주식" },
+  { "id": "relationship", "label": "인간관계" },
+  { "id": "culture", "label": "아침 교양" }
+]

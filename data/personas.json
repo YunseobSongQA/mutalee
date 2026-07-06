@@ -1,0 +1,22 @@
+[
+  {
+    "id": "secretary",
+    "label": "비서",
+    "template": "{name}님, {note}."
+  },
+  {
+    "id": "philosopher",
+    "label": "철학자",
+    "template": "{note}, {name}님."
+  },
+  {
+    "id": "parent",
+    "label": "부모잔소리",
+    "template": "{name}, {note}!"
+  },
+  {
+    "id": "culture",
+    "label": "교양",
+    "template": "{name}님, {note}."
+  }
+]

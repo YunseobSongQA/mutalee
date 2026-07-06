@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>무탈이</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <meta name="theme-color" content="#FAF9F6" />
+  <link rel="stylesheet" href="styles/tokens.css" />
+  <link rel="stylesheet" href="styles/app.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <h1>무탈이</h1>
+      <p>내가 정해둔, 나를 위한 잔소리</p>
+    </header>
+
+    <div id="notice-banner"></div>
+
+    <div class="profile-row">
+      <label for="profile-name">이름</label>
+      <input type="text" id="profile-name" placeholder="사용자" />
+    </div>
+
+    <div class="profile-row">
+      <label for="profile-tone">말투</label>
+      <input type="text" id="profile-tone" placeholder="예: 유머러스하게, 아주 착하게, 짓궂게 놀리듯" />
+    </div>
+
+    <h2 class="section-title">오늘의 교양</h2>
+    <div id="culture-card"></div>
+
+    <h2 class="section-title">오늘의 노티</h2>
+    <div id="reminder-list"></div>
+
+    <button id="add-rule-btn" class="primary">+ 노티 추가</button>
+    <div id="rule-form-container"></div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
