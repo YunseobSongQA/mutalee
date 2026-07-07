@@ -37,12 +37,11 @@ export function setNotifyEnabled(enabled) {
 }
 
 // ---- 로컬 포그라운드 알림 ----
-// 푸시 구독이 되어 있으면 worker/cron.js가 앱이 열려 있어도 어차피 같은 노티를 쏜다.
-// 그 상태에서 로컬로 또 쏘면 잠금화면에 같은 알림이 2번 뜬다.
-// 그래서 "푸시가 이미 이 기기를 담당하고 있으면 로컬은 쏘지 않는다"로 채널을 하나만 남긴다.
+// 앱이 열려 있는 동안은 여기서 즉시(30초 주기) 쏜다 — 정시성이 중요해서 서버 푸시(1분 주기 cron)를
+// 기다리지 않는다. 앱이 열려 있을 때 서버 푸시가 중복으로 뜨는 건 sw.js의 push 핸들러가
+// "지금 포커스된 창이 있으면" 억제해서 막는다 (그래서 여기선 구독 여부를 신경 안 써도 됨).
 export async function checkAndNotify(rules, profile, personas, dateSeed) {
   if (!isNotifyEnabled() || getPermission() !== 'granted') return;
-  if (await getExistingSubscription()) return;
 
   const due = getDueReminders(rules, new Date());
   const notified = loadNotifiedToday(dateSeed);

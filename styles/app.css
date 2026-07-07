@@ -22,6 +22,12 @@ body {
   margin-bottom: var(--space-3);
 }
 
+.app-header .mascot {
+  width: 72px;
+  height: 72px;
+  margin-bottom: var(--space-1);
+}
+
 .app-header h1 {
   font-size: 22px;
   margin: 0 0 var(--space-1);

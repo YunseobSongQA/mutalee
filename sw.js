@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mutalee-v5';
+const CACHE_NAME = 'mutalee-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -50,21 +50,28 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// 앱이 지금 화면에 켜져서 포커스돼 있으면 app.js의 로컬 알림이 이미 담당하고 있으니
+// 여기서 또 띄우면 잠금화면에 같은 알림이 2번 뜬다. 그래서 포커스된 창이 있으면 건너뛴다.
 self.addEventListener('push', (event) => {
-  let data = { title: '무탈이', body: '' };
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data = { title: '무탈이', body: event.data.text() };
-    }
-  }
   event.waitUntil(
-    self.registration.showNotification(data.title || '무탈이', {
-      body: data.body || '',
-      icon: './icons/icon.svg',
-      badge: './icons/icon.svg',
-    })
+    (async () => {
+      const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      if (clientsList.some((c) => c.focused)) return;
+
+      let data = { title: '무탈이', body: '' };
+      if (event.data) {
+        try {
+          data = event.data.json();
+        } catch (e) {
+          data = { title: '무탈이', body: event.data.text() };
+        }
+      }
+      await self.registration.showNotification(data.title || '무탈이', {
+        body: data.body || '',
+        icon: './icons/icon.svg',
+        badge: './icons/icon.svg',
+      });
+    })()
   );
 });
 
