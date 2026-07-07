@@ -18,7 +18,7 @@ export async function onRequestPost({ request, env }) {
 
   const toneLine = tone ? `전체적인 말투 컨셉: ${tone}.` : '';
   const prompt = `너는 알림 문구 작가야. 아래 메모를 "${personaLabel || '비서'}" 캐릭터의 말투로, 사용자 이름 "${name || '사용자'}"을 자연스럽게 넣어서 완성된 알림 문구로 바꿔줘. ${toneLine}
-알림 배너는 표시 공간이 아주 좁으니 반드시 25자 이내, 짧은 한 문장으로만 써.
+글자 수 제한은 없으니 짧게 줄이려고 애쓰지 말고, 그 캐릭터라면 진짜 할 법한 자연스러운 문장으로 써.
 문구만 출력하고 설명이나 따옴표는 붙이지 마.
 
 메모: ${note}`;
@@ -31,7 +31,7 @@ export async function onRequestPost({ request, env }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 60 },
+          generationConfig: { maxOutputTokens: 200 },
         }),
       }
     );

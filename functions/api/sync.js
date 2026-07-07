@@ -1,6 +1,6 @@
 // Pages Function: 클라이언트가 보낸 구독+규칙+프로필을 KV에 저장한다.
 
-async function hashEndpoint(endpoint) {
+export async function hashEndpoint(endpoint) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }

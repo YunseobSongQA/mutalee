@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mutalee-v4';
+const CACHE_NAME = 'mutalee-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -9,12 +9,9 @@ const ASSETS = [
   './reminders/core.js',
   './reminders/store.js',
   './reminders/ui.js',
-  './reminders/generate-client.js',
   './culture/core.js',
   './culture/ui.js',
-  './notify/permission.js',
   './notify/notify.js',
-  './notify/push-client.js',
   './data/categories.json',
   './data/personas.json',
   './data/culture-catalog.json',

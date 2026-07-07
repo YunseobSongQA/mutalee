@@ -1,21 +1,29 @@
 import { getTodaysReminders } from './reminders/core.js';
 import {
   loadRules,
-  saveRules,
   addRule,
   updateRule,
   deleteRule,
   toggleRule,
   loadProfile,
   saveProfile,
+  generateMessage,
 } from './reminders/store.js';
 import { renderReminderList, renderRuleForm } from './reminders/ui.js';
 import { pickDaily } from './culture/core.js';
 import { renderCultureCard } from './culture/ui.js';
-import { checkAndNotify } from './notify/notify.js';
-import { isSupported, getPermission, requestPermission } from './notify/permission.js';
-import { subscribe, syncToServer, getExistingSubscription } from './notify/push-client.js';
-import { generateMessage } from './reminders/generate-client.js';
+import {
+  checkAndNotify,
+  isSupported,
+  getPermission,
+  requestPermission,
+  isNotifyEnabled,
+  setNotifyEnabled,
+  subscribe,
+  unsubscribe,
+  syncToServer,
+  getExistingSubscription,
+} from './notify/notify.js';
 
 function dateSeedOf(date) {
   const y = date.getFullYear();
@@ -132,24 +140,29 @@ function renderNoticeBanner() {
     statusLine.textContent = '🔕 이 브라우저는 알림 기능을 지원하지 않아요.';
   } else {
     const status = getPermission();
-    if (status === 'granted') {
-      statusLine.textContent = '🔔 알림 켜짐 — 앱이 꺼져 있어도 알림이 옵니다.';
-      const off = document.createElement('p');
-      off.className = 'notice-sub';
-      off.textContent = '끄려면 iOS 설정 > 알림 > 무탈이에서 꺼주세요.';
-      box.appendChild(off);
-    } else if (status === 'denied') {
+    if (status === 'denied') {
       statusLine.textContent = '🔕 알림이 차단되어 있어요.';
       const off = document.createElement('p');
       off.className = 'notice-sub';
       off.textContent = '켜려면 iOS 설정 > 알림 > 무탈이에서 허용해주세요.';
       box.appendChild(off);
+    } else if (status === 'granted' && isNotifyEnabled()) {
+      statusLine.textContent = '🔔 알림 켜짐 — 앱이 꺼져 있어도 알림이 옵니다.';
+      const btn = document.createElement('button');
+      btn.textContent = '알림 끄기';
+      btn.onclick = async () => {
+        setNotifyEnabled(false);
+        await unsubscribe();
+        renderNoticeBanner();
+      };
+      box.appendChild(btn);
     } else {
       statusLine.textContent = '🔕 알림 꺼짐';
       const btn = document.createElement('button');
       btn.textContent = '알림 켜기';
       btn.onclick = async () => {
-        await requestPermission();
+        setNotifyEnabled(true);
+        if (getPermission() !== 'granted') await requestPermission();
         renderNoticeBanner();
         runNotifyCheck();
         trySubscribe();
@@ -167,7 +180,7 @@ function runNotifyCheck() {
 }
 
 async function trySubscribe() {
-  if (!pushConfig || getPermission() !== 'granted') return;
+  if (!pushConfig || !isNotifyEnabled() || getPermission() !== 'granted') return;
   const subscription = await subscribe(pushConfig.vapidPublicKey);
   if (subscription) await syncToServer(subscription, rules, profile);
 }

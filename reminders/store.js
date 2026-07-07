@@ -1,4 +1,4 @@
-// localStorage 읽기/쓰기 담당. 로직(core.js)과 섞지 않는다.
+// localStorage 읽기/쓰기 + 서버(Gemini) 문구 생성 요청. 로직(core.js)과 섞지 않는다.
 
 const RULES_KEY = 'mutalee.rules';
 const PROFILE_KEY = 'mutalee.profile';
@@ -65,4 +65,24 @@ export function markNotified(dateSeed, id) {
   if (!data.ids.includes(id)) data.ids.push(id);
   localStorage.setItem(NOTIFIED_KEY, JSON.stringify(data));
   return data;
+}
+
+// 서버(Gemini)에 문구 생성 요청. 실패하면 조용히 null (호출부가 템플릿으로 대체).
+// 한 번 실패하면 Gemini가 가끔 일시적으로 과부하 상태라 1번만 재시도한다.
+export async function generateMessage({ note, personaLabel, name, tone }) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch('/api/generate-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note, personaLabel, name, tone }),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.message) return data.message;
+    } catch (e) {
+      // 다음 시도로 넘어감
+    }
+  }
+  return null;
 }
