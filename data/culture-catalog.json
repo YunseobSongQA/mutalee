@@ -4,9 +4,9 @@
   { "type": "poem", "text": "너를 기다리는 동안 나는 다른 사람이 된다.", "author": "황지우" },
   { "type": "classical", "title": "월광 소나타 1악장", "composer": "루트비히 반 베토벤" },
   { "type": "poem", "text": "가장 밝은 빛은 어둠을 지나온 빛이다.", "author": "라이너 마리아 릴케" },
-  { "type": "classical", "title": "노투르노 Op.9 No.2", "composer": "프레데리크 쇼팽" },
+  { "type": "classical", "title": "녹턴 Op.9 No.2", "composer": "프레데리크 쇼팽" },
   { "type": "poem", "text": "오늘도 나는 온몸으로 시를 밀고 나간다.", "author": "김수영" },
   { "type": "classical", "title": "사계 - 봄 1악장", "composer": "안토니오 비발디" },
   { "type": "poem", "text": "삶이 그대를 속일지라도 슬퍼하거나 노하지 말라.", "author": "알렉산드르 푸시킨" },
-  { "type": "classical", "title": "클레르 드 륀", "composer": "클로드 드뷔시" }
+  { "type": "classical", "title": "달빛", "composer": "클로드 드뷔시" }
 ]

@@ -1,6 +1,4 @@
-// Pages Function: 클라이언트가 끈 (또는 교체되어 죽은) 구독을 KV에서 지운다.
-
-import { hashEndpoint } from './sync.js';
+// Pages Function: 클라이언트가 끈 구독을 KV에서 지운다.
 
 export async function onRequestPost({ request, env }) {
   let payload;
@@ -10,12 +8,12 @@ export async function onRequestPost({ request, env }) {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const { endpoint } = payload;
-  if (!endpoint) {
-    return new Response('Missing endpoint', { status: 400 });
+  const { deviceId } = payload;
+  if (!deviceId) {
+    return new Response('Missing deviceId', { status: 400 });
   }
 
-  const key = `sub:${await hashEndpoint(endpoint)}`;
+  const key = `sub:${deviceId}`;
   await env.MUTALEE_KV.delete(key);
 
   return new Response(JSON.stringify({ ok: true }), {

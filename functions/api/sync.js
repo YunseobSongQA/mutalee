@@ -1,9 +1,6 @@
 // Pages Function: 클라이언트가 보낸 구독+규칙+프로필을 KV에 저장한다.
-
-export async function hashEndpoint(endpoint) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
+// 기기 식별은 deviceId로 한다 (push endpoint는 iOS에서 자주 바뀌어서 키로 쓰면
+// 바뀔 때마다 새 구독이 쌓여 한 기기 앞으로 알림이 중복 발송된다).
 
 export async function onRequestPost({ request, env }) {
   let payload;
@@ -13,12 +10,15 @@ export async function onRequestPost({ request, env }) {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const { subscription, rules, profile, timezone } = payload;
+  const { deviceId, subscription, rules, profile, timezone } = payload;
+  if (!deviceId) {
+    return new Response('Missing deviceId', { status: 400 });
+  }
   if (!subscription || !subscription.endpoint) {
     return new Response('Missing subscription', { status: 400 });
   }
 
-  const key = `sub:${await hashEndpoint(subscription.endpoint)}`;
+  const key = `sub:${deviceId}`;
   const existingRaw = await env.MUTALEE_KV.get(key);
   const existing = existingRaw ? JSON.parse(existingRaw) : {};
 

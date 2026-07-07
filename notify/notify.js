@@ -5,7 +5,19 @@ import { getDueReminders, renderMessage } from '../reminders/core.js';
 import { loadNotifiedToday, markNotified } from '../reminders/store.js';
 
 const ENABLED_KEY = 'mutalee.notify-enabled';
-const LAST_ENDPOINT_KEY = 'mutalee.push-endpoint';
+const DEVICE_ID_KEY = 'mutalee.device-id';
+
+// 이 기기를 서버(KV)에서 식별하는 고유 id. push endpoint는 iOS에서 자주 바뀌는데,
+// endpoint로 KV 키를 잡으면 바뀔 때마다 새 구독이 쌓여서 한 기기 앞으로 알림이 여러 번 온다.
+// 그래서 endpoint 대신 이 변하지 않는 id로 서버 레코드를 하나만 유지한다.
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
 
 // ---- 브라우저 알림 권한 ----
 
@@ -81,36 +93,15 @@ export async function subscribe(vapidPublicKey) {
   });
 }
 
-// iOS는 가끔 push 구독 endpoint가 바뀐다. 바뀐 걸 감지하면 서버에 남아있는
-// 옛 endpoint 구독을 지워서, 한 기기 앞으로 중복 구독이 쌓이지 않게 한다.
-async function cleanupStaleEndpoint(currentEndpoint) {
-  const prev = localStorage.getItem(LAST_ENDPOINT_KEY);
-  if (prev && prev !== currentEndpoint) {
-    try {
-      await fetch('/api/unsubscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: prev }),
-      });
-    } catch (e) {
-      // 정리 실패해도 새 구독 동기화는 계속 진행
-    }
-  }
-  localStorage.setItem(LAST_ENDPOINT_KEY, currentEndpoint);
-}
-
 // 앱 내 "알림 끄기": 구독을 취소하고 서버 쪽 기록도 지운다.
 export async function unsubscribe() {
   const subscription = await getExistingSubscription();
-  if (!subscription) return;
-  const endpoint = subscription.endpoint;
-  await subscription.unsubscribe();
-  localStorage.removeItem(LAST_ENDPOINT_KEY);
+  if (subscription) await subscription.unsubscribe();
   try {
     await fetch('/api/unsubscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpoint }),
+      body: JSON.stringify({ deviceId: getDeviceId() }),
     });
   } catch (e) {
     // 서버 정리 실패해도 클라이언트 구독은 이미 취소됨
@@ -119,13 +110,18 @@ export async function unsubscribe() {
 
 export async function syncToServer(subscription, rules, profile) {
   if (!subscription) return;
-  await cleanupStaleEndpoint(subscription.endpoint);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   try {
     await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription: subscription.toJSON(), rules, profile, timezone }),
+      body: JSON.stringify({
+        deviceId: getDeviceId(),
+        subscription: subscription.toJSON(),
+        rules,
+        profile,
+        timezone,
+      }),
     });
   } catch (e) {
     // 서버 동기화 실패는 조용히 무시 (로컬 알림은 그대로 동작)
