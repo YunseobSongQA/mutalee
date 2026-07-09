@@ -42,6 +42,27 @@ async function sendPush(env, subscription, title, body) {
   });
 }
 
+// KV list()는 무료 한도가 하루 1,000회라 매분 크론(1,440회)이면 초과한다.
+// 대신 살아있는 구독 키 이름 배열을 'sub-index' 키 하나에 저장해두고 get으로 읽는다.
+// 동시 갱신은 last-write-wins지만 이 규모에선 충분하다.
+const INDEX_KEY = 'sub-index';
+
+async function readSubIndex(env) {
+  try {
+    const raw = await env.MUTALEE_KV.get(INDEX_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function removeFromSubIndex(env, keyName) {
+  const index = await readSubIndex(env);
+  if (!index.includes(keyName)) return;
+  await env.MUTALEE_KV.put(INDEX_KEY, JSON.stringify(index.filter((k) => k !== keyName)));
+}
+
 async function processSubscriber(env, keyName) {
   const raw = await env.MUTALEE_KV.get(keyName);
   if (!raw) return;
@@ -81,6 +102,7 @@ async function processSubscriber(env, keyName) {
 
   if (expired) {
     await env.MUTALEE_KV.delete(keyName);
+    await removeFromSubIndex(env, keyName);
   } else if (changed) {
     record.notifiedToday = notified;
     await env.MUTALEE_KV.put(keyName, JSON.stringify(record));
@@ -89,14 +111,14 @@ async function processSubscriber(env, keyName) {
 
 export default {
   async scheduled(event, env, ctx) {
-    const list = await env.MUTALEE_KV.list({ prefix: 'sub:' });
+    const keyNames = await readSubIndex(env);
 
-    for (const key of list.keys) {
+    for (const keyName of keyNames) {
       try {
-        await processSubscriber(env, key.name);
+        await processSubscriber(env, keyName);
       } catch (err) {
         // 구독 하나가 잘못돼도(깨진 키, 인코딩 오류 등) 나머지 구독자 처리는 계속되어야 한다.
-        console.error(`구독 처리 실패 (${key.name}):`, err.message);
+        console.error(`구독 처리 실패 (${keyName}):`, err.message);
       }
     }
   },
