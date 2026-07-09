@@ -1,4 +1,4 @@
-export function renderCultureCard(container, item) {
+export function renderCultureCard(container, item, handlers = {}) {
   container.innerHTML = '';
   if (!item) return;
 
@@ -14,6 +14,20 @@ export function renderCultureCard(container, item) {
   source.className = 'culture-source';
   source.textContent = item.type === 'poem' ? `- ${item.author}` : `- ${item.composer}`;
   card.appendChild(source);
+
+  if (handlers.onRefresh) {
+    const refreshBtn = document.createElement('button');
+    refreshBtn.className = 'culture-refresh';
+    refreshBtn.setAttribute('aria-label', '다른 문구 보기');
+    refreshBtn.textContent = '↻';
+    refreshBtn.onclick = async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.classList.add('spinning');
+      await handlers.onRefresh();
+      // onRefresh가 카드를 다시 그리므로 버튼 상태 복원은 필요 없다.
+    };
+    card.appendChild(refreshBtn);
+  }
 
   container.appendChild(card);
 }

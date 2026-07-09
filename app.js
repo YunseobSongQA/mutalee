@@ -9,9 +9,10 @@ import {
   saveProfile,
   generateMessage,
 } from './reminders/store.js';
-import { renderReminderList, renderRuleForm } from './reminders/ui.js';
+import { renderReminderList, renderRuleForm, openMessageModal } from './reminders/ui.js';
 import { pickDaily } from './culture/core.js';
 import { renderCultureCard } from './culture/ui.js';
+import { loadCultureOverride, saveCultureOverride, generateCulture } from './culture/store.js';
 import {
   checkAndNotify,
   isSupported,
@@ -48,9 +49,11 @@ let rules = [];
 let categories = [];
 let personas = [];
 let cultureCatalog = [];
+let cultureItem = null;
 let pushConfig = null;
 let profile = loadProfile();
 let formOpen = false;
+let editingRuleId = null;
 
 async function syncPushIfSubscribed() {
   const subscription = await getExistingSubscription();
@@ -73,44 +76,66 @@ function render() {
         syncPushIfSubscribed();
       }
     },
-    onEdit: (rule) => openForm(rule),
+    onEdit: (rule) => {
+      editingRuleId = rule.id;
+      closeForm();
+      render();
+    },
+    editingId: editingRuleId,
+    renderEditor: (slot, rule) => {
+      renderRuleForm(
+        slot,
+        categories,
+        personas,
+        {
+          onSubmit: (data, form) => submitRule(data, rule, form),
+          onCancel: () => {
+            editingRuleId = null;
+            render();
+          },
+        },
+        rule
+      );
+    },
   });
 }
 
-function openForm(editingRule) {
+// 추가/수정 공통 저장 경로: 문구 생성 → 규칙 반영 → 다시 그리기 → 서버 동기화.
+async function submitRule(data, editingRule, form) {
+  const submitBtn = form.querySelector('button[type=submit]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '문구 생성 중...';
+  }
+
+  const personaLabel = (personas.find((p) => p.id === data.persona) || {}).label;
+  const generated = await generateMessage({
+    note: data.message,
+    personaLabel,
+    name: profile.name,
+    tone: profile.tone,
+  });
+  if (generated) data.generatedMessage = generated;
+
+  if (editingRule) {
+    rules = updateRule(rules, editingRule.id, data);
+    editingRuleId = null;
+  } else {
+    rules = addRule(rules, { id: generateId(), enabled: true, ...data });
+  }
+  closeForm();
+  render();
+  syncPushIfSubscribed();
+}
+
+function openForm() {
   formOpen = true;
   renderRuleForm(
     formContainer,
     categories,
     personas,
-    {
-      onSubmit: async (data) => {
-        const submitBtn = formContainer.querySelector('button[type=submit]');
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.textContent = '문구 생성 중...';
-        }
-
-        const personaLabel = (personas.find((p) => p.id === data.persona) || {}).label;
-        const generated = await generateMessage({
-          note: data.message,
-          personaLabel,
-          name: profile.name,
-          tone: profile.tone,
-        });
-        if (generated) data.generatedMessage = generated;
-
-        if (editingRule) {
-          rules = updateRule(rules, editingRule.id, data);
-        } else {
-          rules = addRule(rules, { id: generateId(), enabled: true, ...data });
-        }
-        closeForm();
-        render();
-        syncPushIfSubscribed();
-      },
-    },
-    editingRule
+    { onSubmit: (data, form) => submitRule(data, null, form) },
+    null
   );
 }
 
@@ -123,7 +148,7 @@ addRuleBtn.addEventListener('click', () => {
   if (formOpen) {
     closeForm();
   } else {
-    openForm(null);
+    openForm();
   }
 });
 
@@ -176,7 +201,34 @@ function renderNoticeBanner() {
 
 function runNotifyCheck() {
   const now = new Date();
-  checkAndNotify(rules, profile, personas, dateSeedOf(now));
+  checkAndNotify(rules, profile, personas, dateSeedOf(now), openMessageModal);
+}
+
+// ---- 오늘의 교양 ----
+
+function renderCulture() {
+  renderCultureCard(cultureEl, cultureItem, { onRefresh: refreshCulture });
+}
+
+// 새로고침: 사용자의 알림 메모들을 참고해 AI가 마음에 도움이 되는 문구를 새로 만든다.
+// AI가 실패하면 카탈로그에서 지금 것과 다른 문구를 뽑아서라도 반드시 바뀌게 한다.
+async function refreshCulture() {
+  const notes = rules.filter((r) => r.enabled).map((r) => `${r.title}: ${r.message}`);
+  const generated = await generateCulture({
+    notes,
+    name: profile.name,
+    tone: profile.tone,
+    previousText: cultureItem ? cultureItem.text || cultureItem.title : '',
+  });
+
+  if (generated) {
+    cultureItem = generated;
+  } else {
+    const others = cultureCatalog.filter((c) => c !== cultureItem);
+    if (others.length > 0) cultureItem = others[Math.floor(Math.random() * others.length)];
+  }
+  saveCultureOverride(dateSeedOf(new Date()), cultureItem);
+  renderCulture();
 }
 
 async function trySubscribe() {
@@ -215,20 +267,40 @@ async function init() {
 
   renderNoticeBanner();
 
-  const today = new Date();
-  const dailyItem = pickDaily(cultureCatalog, dateSeedOf(today));
-  renderCultureCard(cultureEl, dailyItem);
+  const todaySeed = dateSeedOf(new Date());
+  cultureItem = loadCultureOverride(todaySeed) || pickDaily(cultureCatalog, todaySeed);
+  renderCulture();
 
   render();
   runNotifyCheck();
 
+  // 잠금화면 알림(푸시)을 눌러 새로 열린 경우: sw.js가 URL에 실어준 전체 문구를 모달로 보여준다.
+  const params = new URLSearchParams(location.search);
+  if (params.has('noti')) {
+    try {
+      const payload = JSON.parse(params.get('noti'));
+      if (payload && payload.body) openMessageModal(payload.title || '무탈이', payload.body);
+    } catch (e) {
+      // 깨진 파라미터는 무시
+    }
+    history.replaceState(null, '', location.pathname);
+  }
+
   setInterval(() => {
-    render();
+    // 인라인 수정 중에는 다시 그리면 입력 중인 내용이 날아가므로 건너뛴다.
+    if (editingRuleId === null) render();
     runNotifyCheck();
   }, 30000);
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
+    // 앱이 이미 열려 있는 상태에서 푸시 알림을 누른 경우: sw.js가 보내는 전체 문구를 모달로.
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      const data = event.data;
+      if (data && data.type === 'notification-click' && data.body) {
+        openMessageModal(data.title || '무탈이', data.body);
+      }
+    });
     trySubscribe();
   }
 }

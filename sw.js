@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mutalee-v6';
+const CACHE_NAME = 'mutalee-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const ASSETS = [
   './reminders/store.js',
   './reminders/ui.js',
   './culture/core.js',
+  './culture/store.js',
   './culture/ui.js',
   './notify/notify.js',
   './data/categories.json',
@@ -70,6 +71,8 @@ self.addEventListener('push', (event) => {
         body: data.body || '',
         icon: './icons/icon.svg',
         badge: './icons/icon.svg',
+        // 잠금화면에선 문구가 잘리므로, 클릭 시 앱에서 전체 문구를 보여줄 수 있게 담아둔다.
+        data: { title: data.title || '무탈이', body: data.body || '' },
       });
     })()
   );
@@ -77,11 +80,19 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const payload = event.notification.data || null;
   event.waitUntil(
     self.clients.matchAll({ type: 'window' }).then((clientsArr) => {
       const existing = clientsArr.find((c) => c.url.includes(self.registration.scope));
-      if (existing) return existing.focus();
-      return self.clients.openWindow('./');
+      if (existing) {
+        // 이미 열린 앱에는 메시지로 전달 → app.js가 전체 문구 모달을 띄운다.
+        if (payload && payload.body) existing.postMessage({ type: 'notification-click', ...payload });
+        return existing.focus();
+      }
+      // 새로 여는 경우엔 URL 파라미터로 전달 (postMessage를 받을 리스너가 아직 없으므로).
+      const url =
+        payload && payload.body ? `./?noti=${encodeURIComponent(JSON.stringify(payload))}` : './';
+      return self.clients.openWindow(url);
     })
   );
 });

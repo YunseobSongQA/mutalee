@@ -55,6 +55,37 @@ body {
 
 .culture-card {
   background: var(--color-sub);
+  position: relative;
+  padding-right: calc(var(--space-2) + 28px);
+}
+
+.culture-refresh {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  color: #6f6a5c;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.culture-refresh:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.culture-refresh.spinning {
+  animation: culture-spin 0.9s linear infinite;
+}
+
+@keyframes culture-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .culture-card .culture-text {
@@ -73,6 +104,8 @@ body {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
+  position: relative;
+  padding-bottom: calc(var(--space-2) + 22px);
 }
 
 .reminder-card.is-due {
@@ -113,23 +146,38 @@ body {
   color: #999;
 }
 
+/* 수정/삭제: 카드 오른쪽 아래에 작은 알약 버튼으로 */
 .reminder-actions {
+  position: absolute;
+  right: var(--space-2);
+  bottom: 10px;
   display: flex;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
+  gap: 6px;
 }
 
 .reminder-actions button {
-  border: none;
-  background: none;
-  font-size: 12px;
-  color: #999;
+  border: 1px solid #e6e2d8;
+  background: #fbfaf7;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #8a8a8a;
   cursor: pointer;
-  padding: 0;
+  padding: 3px 12px;
+  font-family: var(--font-family);
 }
 
 .reminder-actions button:hover {
   color: var(--color-text);
+  border-color: #d6d2c6;
+}
+
+.reminder-actions button.danger {
+  color: #c0705f;
+}
+
+.reminder-actions button.danger:hover {
+  color: #a44b3b;
+  border-color: #e0c3ba;
 }
 
 .empty-note {
@@ -219,6 +267,26 @@ form.rule-form {
   gap: var(--space-1);
 }
 
+.form-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.form-actions button.primary {
+  flex: 1;
+}
+
+button.ghost {
+  background: none;
+  border: 1px solid var(--color-sub);
+  color: #8a8a8a;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: var(--font-family);
+}
+
 form.rule-form label {
   font-size: 12px;
   color: #777;
@@ -284,6 +352,40 @@ form.rule-form textarea {
 .day-checkboxes label:has(input:checked) span {
   color: #fff;
   font-weight: bold;
+}
+
+/* 알림 전체 문구 모달 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  z-index: 100;
+}
+
+.message-modal {
+  max-width: 420px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--space-3);
+}
+
+.message-modal h3 {
+  font-size: 16px;
+  margin: 0 0 var(--space-1);
+}
+
+.message-modal-body {
+  font-size: 14px;
+  color: #555;
+  margin: 0 0 var(--space-2);
+  white-space: pre-wrap;
+  word-break: keep-all;
 }
 
 .profile-row {

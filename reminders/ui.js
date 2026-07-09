@@ -27,6 +27,14 @@ export function renderReminderList(container, todaysReminders, categories, perso
   const nowHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   todaysReminders.forEach((reminder) => {
+    // 수정 중인 노티는 카드 대신 그 자리에 수정 폼을 그린다 (인라인 수정).
+    if (handlers.editingId === reminder.id && handlers.renderEditor) {
+      const slot = document.createElement('div');
+      container.appendChild(slot);
+      handlers.renderEditor(slot, reminder);
+      return;
+    }
+
     const isDue = reminder.schedule.time <= nowHHMM;
 
     const card = document.createElement('div');
@@ -49,6 +57,15 @@ export function renderReminderList(container, todaysReminders, categories, perso
     meta.textContent = `${labelOf(categories, reminder.category)} · ${labelOf(personas, reminder.persona)} · ${daysToText(reminder.schedule.days)}`;
     body.appendChild(meta);
 
+    card.appendChild(body);
+
+    const toggle = document.createElement('button');
+    toggle.className = 'toggle-switch' + (reminder.enabled ? ' on' : '');
+    toggle.setAttribute('aria-label', '노티 on/off');
+    toggle.onclick = () => handlers.onToggle(reminder.id);
+    card.appendChild(toggle);
+
+    // 수정/삭제는 카드 오른쪽 아래에 작은 알약 버튼으로 (본문 흐름과 분리).
     const actions = document.createElement('div');
     actions.className = 'reminder-actions';
 
@@ -58,21 +75,48 @@ export function renderReminderList(container, todaysReminders, categories, perso
     actions.appendChild(editBtn);
 
     const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'danger';
     deleteBtn.textContent = '삭제';
     deleteBtn.onclick = () => handlers.onDelete(reminder.id);
     actions.appendChild(deleteBtn);
 
-    body.appendChild(actions);
-    card.appendChild(body);
-
-    const toggle = document.createElement('button');
-    toggle.className = 'toggle-switch' + (reminder.enabled ? ' on' : '');
-    toggle.setAttribute('aria-label', '노티 on/off');
-    toggle.onclick = () => handlers.onToggle(reminder.id);
-    card.appendChild(toggle);
+    card.appendChild(actions);
 
     container.appendChild(card);
   });
+}
+
+// 알림(로컬/푸시)을 눌렀을 때 잘리지 않은 전체 문구를 보여주는 모달.
+export function openMessageModal(title, body) {
+  const existing = document.querySelector('.modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => {
+    if (e.target === overlay) overlay.remove();
+  };
+
+  const modal = document.createElement('div');
+  modal.className = 'card message-modal';
+
+  const heading = document.createElement('h3');
+  heading.textContent = title;
+  modal.appendChild(heading);
+
+  const text = document.createElement('p');
+  text.className = 'message-modal-body';
+  text.textContent = body;
+  modal.appendChild(text);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'primary';
+  closeBtn.textContent = '닫기';
+  closeBtn.onclick = () => overlay.remove();
+  modal.appendChild(closeBtn);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }
 
 export function renderRuleForm(container, categories, personas, handlers, editingRule) {
@@ -190,11 +234,25 @@ export function renderRuleForm(container, categories, personas, handlers, editin
     });
   }
 
+  const actionsRow = document.createElement('div');
+  actionsRow.className = 'form-actions';
+
   const submitBtn = document.createElement('button');
   submitBtn.type = 'submit';
   submitBtn.className = 'primary';
   submitBtn.textContent = editingRule ? '수정 완료' : '노티 추가';
-  form.appendChild(submitBtn);
+  actionsRow.appendChild(submitBtn);
+
+  if (handlers.onCancel) {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'ghost';
+    cancelBtn.textContent = '취소';
+    cancelBtn.onclick = handlers.onCancel;
+    actionsRow.appendChild(cancelBtn);
+  }
+
+  form.appendChild(actionsRow);
 
   form.onsubmit = (e) => {
     e.preventDefault();
@@ -203,13 +261,16 @@ export function renderRuleForm(container, categories, personas, handlers, editin
       alert('요일을 하나 이상 선택해주세요.');
       return;
     }
-    handlers.onSubmit({
-      category: categorySelect.value,
-      persona: personaSelect.value,
-      title: titleInput.value,
-      message: messageInput.value,
-      schedule: { days, time: timeInput.value },
-    });
+    handlers.onSubmit(
+      {
+        category: categorySelect.value,
+        persona: personaSelect.value,
+        title: titleInput.value,
+        message: messageInput.value,
+        schedule: { days, time: timeInput.value },
+      },
+      form
+    );
   };
 
   container.appendChild(form);

@@ -52,7 +52,7 @@ export function setNotifyEnabled(enabled) {
 // 앱이 열려 있는 동안은 여기서 즉시(30초 주기) 쏜다 — 정시성이 중요해서 서버 푸시(1분 주기 cron)를
 // 기다리지 않는다. 앱이 열려 있을 때 서버 푸시가 중복으로 뜨는 건 sw.js의 push 핸들러가
 // "지금 포커스된 창이 있으면" 억제해서 막는다 (그래서 여기선 구독 여부를 신경 안 써도 됨).
-export async function checkAndNotify(rules, profile, personas, dateSeed) {
+export async function checkAndNotify(rules, profile, personas, dateSeed, onOpen) {
   if (!isNotifyEnabled() || getPermission() !== 'granted') return;
 
   const due = getDueReminders(rules, new Date());
@@ -60,9 +60,15 @@ export async function checkAndNotify(rules, profile, personas, dateSeed) {
 
   due.forEach((reminder) => {
     if (notified.ids.includes(reminder.id)) return;
-    new Notification(reminder.title, {
-      body: renderMessage(reminder, profile, personas),
-    });
+    const body = renderMessage(reminder, profile, personas);
+    const notification = new Notification(reminder.title, { body });
+    // OS가 문구를 잘라서 보여주므로, 누르면 앱에서 전체 문구를 볼 수 있게 한다.
+    if (typeof onOpen === 'function') {
+      notification.onclick = () => {
+        window.focus();
+        onOpen(reminder.title, body);
+      };
+    }
     markNotified(dateSeed, reminder.id);
   });
 }
