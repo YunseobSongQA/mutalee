@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mutalee-v7';
+const CACHE_NAME = 'mutalee-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const ASSETS = [
   './culture/store.js',
   './culture/ui.js',
   './notify/notify.js',
+  './notify/ui.js',
   './data/categories.json',
   './data/personas.json',
   './data/culture-catalog.json',

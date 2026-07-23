@@ -15,16 +15,13 @@ import { renderCultureCard } from './culture/ui.js';
 import { loadCultureOverride, saveCultureOverride, generateCulture } from './culture/store.js';
 import {
   checkAndNotify,
-  isSupported,
   getPermission,
-  requestPermission,
   isNotifyEnabled,
-  setNotifyEnabled,
   subscribe,
-  unsubscribe,
   syncToServer,
   getExistingSubscription,
 } from './notify/notify.js';
+import { renderNoticeBanner } from './notify/ui.js';
 
 function dateSeedOf(date) {
   const y = date.getFullYear();
@@ -152,51 +149,14 @@ addRuleBtn.addEventListener('click', () => {
   }
 });
 
-function renderNoticeBanner() {
-  noticeEl.innerHTML = '';
-  const box = document.createElement('div');
-  box.className = 'notice-banner';
-
-  const statusLine = document.createElement('p');
-  statusLine.className = 'notice-status';
-  box.appendChild(statusLine);
-
-  if (!isSupported()) {
-    statusLine.textContent = '🔕 이 브라우저는 알림 기능을 지원하지 않아요.';
-  } else {
-    const status = getPermission();
-    if (status === 'denied') {
-      statusLine.textContent = '🔕 알림이 차단되어 있어요.';
-      const off = document.createElement('p');
-      off.className = 'notice-sub';
-      off.textContent = '켜려면 iOS 설정 > 알림 > 무탈이에서 허용해주세요.';
-      box.appendChild(off);
-    } else if (status === 'granted' && isNotifyEnabled()) {
-      statusLine.textContent = '🔔 알림 켜짐 — 앱이 꺼져 있어도 알림이 옵니다.';
-      const btn = document.createElement('button');
-      btn.textContent = '알림 끄기';
-      btn.onclick = async () => {
-        setNotifyEnabled(false);
-        await unsubscribe();
-        renderNoticeBanner();
-      };
-      box.appendChild(btn);
-    } else {
-      statusLine.textContent = '🔕 알림 꺼짐';
-      const btn = document.createElement('button');
-      btn.textContent = '알림 켜기';
-      btn.onclick = async () => {
-        setNotifyEnabled(true);
-        if (getPermission() !== 'granted') await requestPermission();
-        renderNoticeBanner();
-        runNotifyCheck();
-        trySubscribe();
-      };
-      box.appendChild(btn);
-    }
-  }
-
-  noticeEl.appendChild(box);
+// 배너 화면은 notify/ui.js 담당. 여기선 "켜졌을 때 이어서 할 일"만 넘긴다.
+function renderBanner() {
+  renderNoticeBanner(noticeEl, {
+    onEnabled: () => {
+      runNotifyCheck();
+      trySubscribe();
+    },
+  });
 }
 
 function runNotifyCheck() {
@@ -265,7 +225,7 @@ async function init() {
   pushConfig = await pushConfigRes.json();
   rules = await loadRules();
 
-  renderNoticeBanner();
+  renderBanner();
 
   const todaySeed = dateSeedOf(new Date());
   cultureItem = loadCultureOverride(todaySeed) || pickDaily(cultureCatalog, todaySeed);

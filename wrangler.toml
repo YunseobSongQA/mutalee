@@ -1,6 +1,7 @@
 name = "mutalee"
 compatibility_date = "2024-09-23"
-pages_build_output_dir = "."
+# 클라이언트(public/)만 정적 배포한다. functions/는 wrangler가 루트에서 자동 인식.
+pages_build_output_dir = "public"
 
 # worker/wrangler.toml과 반드시 같은 id를 써야 한다.
 [[kv_namespaces]]
