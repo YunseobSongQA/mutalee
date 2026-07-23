@@ -110,6 +110,14 @@ async function processSubscriber(env, keyName) {
 }
 
 export default {
+  // 이 Worker는 크론 전용이라 원래 HTTP 처리가 없다. 주소로 직접 접속했을 때
+  // Error 1101(핸들러 없음 예외) 대신 상태 안내만 돌려준다.
+  async fetch() {
+    return new Response('mutalee-cron: 크론 전용 Worker입니다. 매분 실행되어 도래한 노티를 푸시로 발송합니다.', {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  },
+
   async scheduled(event, env, ctx) {
     const keyNames = await readSubIndex(env);
 
