@@ -1,27 +1,12 @@
-// Pages Function: 클라이언트가 보낸 구독+규칙+프로필을 KV에 저장한다.
+// Pages Function: 클라이언트가 보낸 구독+규칙+프로필을 발송 Worker(Durable Object)에 저장한다.
 // 기기 식별은 deviceId로 한다 (push endpoint는 iOS에서 자주 바뀌어서 키로 쓰면
 // 바뀔 때마다 새 구독이 쌓여 한 기기 앞으로 알림이 중복 발송된다).
+//
+// 예전엔 KV에 직접 썼지만, KV는 최종 일관성이라 방금 만든 알람이 크론 눈에 최대 60초
+// 늦게 보였다. 지금은 Worker의 Durable Object에 저장하는 즉시 도래 시각으로 알람이 걸린다.
+// SYNC_TOKEN은 Pages와 Worker 양쪽에 같은 값으로 넣어둔 시크릿 (외부인의 발송 API 호출 차단).
 
-// 크론이 KV list() 대신 읽는 구독 키 인덱스 ('sub-index' = 살아있는 sub 키 이름 배열).
-// worker/cron.js와 같은 로직이지만 배포 경계가 달라 모듈을 공유할 수 없어 여기 둔다.
-const INDEX_KEY = 'sub-index';
-
-async function readSubIndex(env) {
-  try {
-    const raw = await env.MUTALEE_KV.get(INDEX_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-async function addToSubIndex(env, keyName) {
-  const index = await readSubIndex(env);
-  if (index.includes(keyName)) return;
-  index.push(keyName);
-  await env.MUTALEE_KV.put(INDEX_KEY, JSON.stringify(index));
-}
+const WORKER_URL = 'https://mutalee-cron.eyelash96.workers.dev';
 
 export async function onRequestPost({ request, env }) {
   let payload;
@@ -39,21 +24,22 @@ export async function onRequestPost({ request, env }) {
     return new Response('Missing subscription', { status: 400 });
   }
 
-  const key = `sub:${deviceId}`;
-  const existingRaw = await env.MUTALEE_KV.get(key);
-  const existing = existingRaw ? JSON.parse(existingRaw) : {};
-
   const record = {
     subscription,
     rules: rules || [],
     profile: profile || { name: '사용자' },
     timezone: timezone || 'Asia/Seoul',
-    notifiedToday: existing.notifiedToday || { date: '', ids: [] },
     updatedAt: Date.now(),
   };
 
-  await env.MUTALEE_KV.put(key, JSON.stringify(record));
-  await addToSubIndex(env, key);
+  const res = await fetch(`${WORKER_URL}/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-sync-token': env.SYNC_TOKEN },
+    body: JSON.stringify({ deviceId, record }),
+  });
+  if (!res.ok) {
+    return new Response('Scheduler error', { status: 502 });
+  }
 
   return new Response(JSON.stringify({ ok: true }), {
     headers: { 'Content-Type': 'application/json' },
