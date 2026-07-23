@@ -233,7 +233,8 @@ form.rule-form textarea {
   margin-bottom: var(--space-2);
 }
 
-.profile-row input {
+.profile-row input,
+.profile-row select {
   flex: 1;
   padding: 6px 10px;
 }

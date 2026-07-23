@@ -223,7 +223,25 @@ profileNameInput.addEventListener('change', () => {
   syncPushIfSubscribed();
 });
 
-profileToneInput.value = profile.tone || '';
+// 말투 드롭박스: 목록은 data/tones.json. 예전에 직접 입력해둔 말투는 선택지에 추가해 살린다.
+function populateToneSelect(tones) {
+  profileToneInput.innerHTML = '';
+  const noneOpt = document.createElement('option');
+  noneOpt.value = '';
+  noneOpt.textContent = '기본';
+  profileToneInput.appendChild(noneOpt);
+
+  const list = tones.slice();
+  if (profile.tone && !list.includes(profile.tone)) list.push(profile.tone);
+  list.forEach((tone) => {
+    const opt = document.createElement('option');
+    opt.value = tone;
+    opt.textContent = tone;
+    profileToneInput.appendChild(opt);
+  });
+  profileToneInput.value = profile.tone || '';
+}
+
 profileToneInput.addEventListener('change', () => {
   profile = { ...profile, tone: profileToneInput.value };
   saveProfile(profile);
@@ -231,16 +249,18 @@ profileToneInput.addEventListener('change', () => {
 });
 
 async function init() {
-  const [categoriesRes, personasRes, cultureRes, pushConfigRes] = await Promise.all([
+  const [categoriesRes, personasRes, cultureRes, pushConfigRes, tonesRes] = await Promise.all([
     fetch('data/categories.json'),
     fetch('data/personas.json'),
     fetch('data/culture-catalog.json'),
     fetch('data/push-config.json'),
+    fetch('data/tones.json'),
   ]);
   categories = await categoriesRes.json();
   personas = await personasRes.json();
   cultureCatalog = await cultureRes.json();
   pushConfig = await pushConfigRes.json();
+  populateToneSelect(await tonesRes.json());
   rules = await loadRules();
 
   renderBanner();
