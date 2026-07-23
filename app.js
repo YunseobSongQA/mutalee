@@ -284,11 +284,18 @@ async function init() {
     history.replaceState(null, '', location.pathname);
   }
 
-  setInterval(() => {
-    // 인라인 수정 중에는 다시 그리면 입력 중인 내용이 날아가므로 건너뛴다.
-    if (editingRuleId === null) render();
-    runNotifyCheck();
-  }, 30000);
+  // 매분 정각에 맞춰 체크한다. 예전엔 고정 30초 간격이라 시각이 되고도 최대 30초 늦게 알림이 떴다.
+  function minuteTick() {
+    const now = new Date();
+    const msToNextMinute = 60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
+    setTimeout(() => {
+      // 인라인 수정 중에는 다시 그리면 입력 중인 내용이 날아가므로 건너뛴다.
+      if (editingRuleId === null) render();
+      runNotifyCheck();
+      minuteTick();
+    }, msToNextMinute + 50);
+  }
+  minuteTick();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});

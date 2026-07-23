@@ -116,16 +116,27 @@ export default {
     return Response.redirect('https://mutalee.pages.dev', 302);
   },
 
+  // Cloudflare 크론은 매분 정각이 아니라 워커별 고정 오프셋(이 워커는 매분 31초경)에 깨어난다.
+  // 그래서 ① 이번 분에 이미 도래한 노티를 즉시 처리하고, ② 다음 분 정각까지 대기했다가
+  // 그 분의 노티를 정각에 맞춰 처리한다. 문구는 등록 때 생성돼 record에 들어 있으므로
+  // 발송 시점엔 만들 게 없다. (대기는 wall time이라 CPU 한도와 무관, 중복은 notifiedToday로 방지)
   async scheduled(event, env, ctx) {
     const keyNames = await readSubIndex(env);
+    await processAll(env, keyNames);
 
-    for (const keyName of keyNames) {
-      try {
-        await processSubscriber(env, keyName);
-      } catch (err) {
-        // 구독 하나가 잘못돼도(깨진 키, 인코딩 오류 등) 나머지 구독자 처리는 계속되어야 한다.
-        console.error(`구독 처리 실패 (${keyName}):`, err.message);
-      }
-    }
+    const msToNextMinute = 60000 - (Date.now() % 60000);
+    await new Promise((resolve) => setTimeout(resolve, msToNextMinute + 200));
+    await processAll(env, keyNames);
   },
 };
+
+async function processAll(env, keyNames) {
+  for (const keyName of keyNames) {
+    try {
+      await processSubscriber(env, keyName);
+    } catch (err) {
+      // 구독 하나가 잘못돼도(깨진 키, 인코딩 오류 등) 나머지 구독자 처리는 계속되어야 한다.
+      console.error(`구독 처리 실패 (${keyName}):`, err.message);
+    }
+  }
+}
