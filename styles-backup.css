@@ -1,0 +1,428 @@
+/* 색·간격 변수 (구 tokens.css) */
+:root {
+  --color-bg: #FAF9F6;
+  --color-text: #3a3a3a;
+  --color-accent: #A9C29A;
+  --color-sub: #E8E0D0;
+  --color-highlight: #F4C7C3;
+
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+
+  --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  --line-height-loose: 1.7;
+  --letter-spacing-loose: 0.02em;
+}
+
+/* 화면 스타일 (구 app.css) */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  line-height: var(--line-height-loose);
+  letter-spacing: var(--letter-spacing-loose);
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-2) var(--space-4);
+}
+
+.app-header {
+  text-align: center;
+  margin-bottom: var(--space-3);
+}
+
+.app-header .mascot {
+  width: 72px;
+  height: 72px;
+  margin-bottom: var(--space-1);
+}
+
+.app-header h1 {
+  font-size: 22px;
+  margin: 0 0 var(--space-1);
+}
+
+.app-header p {
+  margin: 0;
+  font-size: 13px;
+  color: #8a8a8a;
+}
+
+.section-title {
+  font-size: 14px;
+  color: #8a8a8a;
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.culture-card {
+  background: var(--color-sub);
+  position: relative;
+  padding-right: calc(var(--space-2) + 28px);
+}
+
+.culture-refresh {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  color: #6f6a5c;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.culture-refresh:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.culture-refresh.spinning {
+  animation: culture-spin 0.9s linear infinite;
+}
+
+@keyframes culture-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.culture-card .culture-text {
+  font-size: 15px;
+  margin: 0 0 var(--space-1);
+}
+
+.culture-card .culture-source {
+  font-size: 12px;
+  color: #6f6a5c;
+  margin: 0;
+  text-align: right;
+}
+
+.reminder-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  position: relative;
+  padding-bottom: calc(var(--space-2) + 22px);
+}
+
+.reminder-card.is-due {
+  border: 1px solid var(--color-accent);
+}
+
+.reminder-card .badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-sub);
+  color: var(--color-text);
+}
+
+.reminder-card.is-due .badge {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.reminder-body {
+  flex: 1;
+}
+
+.reminder-body h3 {
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+
+.reminder-body p {
+  font-size: 13px;
+  margin: 0 0 6px;
+  color: #555;
+}
+
+.reminder-meta {
+  font-size: 11px;
+  color: #999;
+}
+
+/* 수정/삭제: 카드 오른쪽 아래에 작은 알약 버튼으로 */
+.reminder-actions {
+  position: absolute;
+  right: var(--space-2);
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.reminder-actions button {
+  border: 1px solid #e6e2d8;
+  background: #fbfaf7;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #8a8a8a;
+  cursor: pointer;
+  padding: 3px 12px;
+  font-family: var(--font-family);
+}
+
+.reminder-actions button:hover {
+  color: var(--color-text);
+  border-color: #d6d2c6;
+}
+
+.reminder-actions button.danger {
+  color: #c0705f;
+}
+
+.reminder-actions button.danger:hover {
+  color: #a44b3b;
+  border-color: #e0c3ba;
+}
+
+.empty-note {
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+  padding: var(--space-3) 0;
+}
+
+.notice-banner {
+  background: var(--color-sub);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  font-size: 12px;
+  margin-bottom: var(--space-3);
+  color: #6f6a5c;
+}
+
+.notice-status {
+  margin: 0;
+  font-weight: bold;
+}
+
+.notice-sub {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #8a8578;
+}
+
+.notice-banner button {
+  display: block;
+  margin-top: var(--space-1);
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.toggle-switch {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  background: #ddd;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-switch.on {
+  background: var(--color-accent);
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s ease;
+}
+
+.toggle-switch.on::after {
+  left: 18px;
+}
+
+form.rule-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.form-actions button.primary {
+  flex: 1;
+}
+
+button.ghost {
+  background: none;
+  border: 1px solid var(--color-sub);
+  color: #8a8a8a;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: var(--font-family);
+}
+
+form.rule-form label {
+  font-size: 12px;
+  color: #777;
+  display: block;
+  margin-bottom: 2px;
+}
+
+form.rule-form input[type="text"],
+form.rule-form input[type="time"],
+form.rule-form select,
+form.rule-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-sub);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 13px;
+  background: var(--color-bg);
+}
+
+.day-presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.day-preset-btn {
+  border: 1px solid var(--color-sub);
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.day-checkboxes {
+  display: flex;
+  gap: 4px;
+}
+
+.day-checkboxes label {
+  flex: 1;
+  text-align: center;
+  border: 2px solid var(--color-sub);
+  border-radius: var(--radius-md);
+  padding: 6px 0;
+  font-size: 12px;
+  cursor: pointer;
+  background: #fff;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+.day-checkboxes input {
+  display: none;
+}
+
+.day-checkboxes label:has(input:checked) {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.day-checkboxes label:has(input:checked) span {
+  color: #fff;
+  font-weight: bold;
+}
+
+/* 알림 전체 문구 모달 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  z-index: 100;
+}
+
+.message-modal {
+  max-width: 420px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--space-3);
+}
+
+.message-modal h3 {
+  font-size: 16px;
+  margin: 0 0 var(--space-1);
+}
+
+.message-modal-body {
+  font-size: 14px;
+  color: #555;
+  margin: 0 0 var(--space-2);
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 13px;
+  margin-bottom: var(--space-2);
+}
+
+.profile-row input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--color-sub);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+}

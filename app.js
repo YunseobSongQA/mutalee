@@ -1,4 +1,4 @@
-// 화면 연결만 담당하는 진입점. 기능별 코드는 js/기능이름.js 하나씩에 모여 있다.
+// 화면 연결만 담당하는 진입점. 기능별 코드는 루트의 기능이름.js 하나씩에 모여 있다.
 import {
   getTodaysReminders,
   loadRules,
@@ -12,14 +12,14 @@ import {
   renderReminderList,
   renderRuleForm,
   openMessageModal,
-} from './js/reminders.js';
+} from './reminders.js';
 import {
   pickDaily,
   loadCultureOverride,
   saveCultureOverride,
   generateCulture,
   renderCultureCard,
-} from './js/culture.js';
+} from './culture.js';
 import {
   checkAndNotify,
   getPermission,
@@ -28,7 +28,7 @@ import {
   syncToServer,
   getExistingSubscription,
   renderNoticeBanner,
-} from './js/notify.js';
+} from './notify.js';
 
 function dateSeedOf(date) {
   const y = date.getFullYear();
@@ -84,6 +84,17 @@ function render() {
       editingRuleId = rule.id;
       closeForm();
       render();
+    },
+    // 복제: 같은 내용에 새 id로 하나 더 만든다. schedule은 얕은 복사로 원본과 얽히지 않게.
+    onDuplicate: (rule) => {
+      rules = addRule(rules, {
+        ...rule,
+        id: generateId(),
+        title: `${rule.title} (복제)`,
+        schedule: { ...rule.schedule, days: [...rule.schedule.days] },
+      });
+      render();
+      syncPushIfSubscribed();
     },
     editingId: editingRuleId,
     renderEditor: (slot, rule) => {
@@ -156,7 +167,7 @@ addRuleBtn.addEventListener('click', () => {
   }
 });
 
-// 배너 화면은 notify/ui.js 담당. 여기선 "켜졌을 때 이어서 할 일"만 넘긴다.
+// 배너 화면은 notify.js 담당. 여기선 "켜졌을 때 이어서 할 일"만 넘긴다.
 function renderBanner() {
   renderNoticeBanner(noticeEl, {
     onEnabled: () => {

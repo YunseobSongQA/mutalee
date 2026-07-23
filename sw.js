@@ -1,13 +1,13 @@
-const CACHE_NAME = 'mutalee-v10';
+const CACHE_NAME = 'mutalee-v11';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './style.css',
   './app.js',
-  './js/reminders.js',
-  './js/culture.js',
-  './js/notify.js',
+  './reminders.js',
+  './culture.js',
+  './notify.js',
   './data/categories.json',
   './data/personas.json',
   './data/culture-catalog.json',

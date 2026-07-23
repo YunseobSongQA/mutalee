@@ -206,6 +206,11 @@ export function renderReminderList(container, todaysReminders, categories, perso
     editBtn.onclick = () => handlers.onEdit(reminder);
     actions.appendChild(editBtn);
 
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.textContent = '복제';
+    duplicateBtn.onclick = () => handlers.onDuplicate(reminder);
+    actions.appendChild(duplicateBtn);
+
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'danger';
     deleteBtn.textContent = '삭제';
