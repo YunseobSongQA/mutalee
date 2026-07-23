@@ -17,6 +17,9 @@ import pushConfig from '../data/push-config.json';
 
 const APP_URL = 'https://mutalee.pages.dev';
 const RETRY_MS = 30 * 1000; // 일시 실패(네트워크 등) 시 재시도 간격
+// 도래 후 이만큼 지난 알람은 발송하지 않는다. 없으면 구독/재설치 직후에
+// "오늘 이미 지난 시각"의 알람들이 한꺼번에 발송돼버린다 (엔진 공백 복구용 여유만 남김).
+const GRACE_MS = 5 * 60 * 1000;
 
 function zonedNow(timeZone) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -84,12 +87,29 @@ async function sendPush(env, subscription, title, body) {
 }
 
 export class MutaleeScheduler extends DurableObject {
-  // /api/sync → 저장 즉시 다음 도래 시각으로 알람을 건다. notifiedToday는 기존 것을 보존.
+  // /api/sync → 저장 즉시 다음 도래 시각으로 알람을 건다. notifiedToday는 기존 것을 보존하되,
+  // 시각·요일이 바뀐 규칙은 "오늘 이미 울렸음" 기록을 지운다 — 안 지우면 수정한 알람이
+  // 새 시각에 도래해도 같은 id라는 이유로 무시된다 (17:33으로 수정했는데 안 울리던 버그).
   async syncRecord(deviceId, record) {
     const key = `rec:${deviceId}`;
     const existing = await this.ctx.storage.get(key);
-    record.notifiedToday =
+    const notified =
       (existing && existing.notifiedToday) || record.notifiedToday || { date: '', ids: [] };
+
+    if (existing && Array.isArray(existing.rules)) {
+      const prevById = new Map(existing.rules.map((r) => [r.id, r]));
+      notified.ids = notified.ids.filter((id) => {
+        const prev = prevById.get(id);
+        const next = (record.rules || []).find((r) => r.id === id);
+        if (!prev || !next || !prev.schedule || !next.schedule) return true;
+        return (
+          prev.schedule.time === next.schedule.time &&
+          JSON.stringify(prev.schedule.days) === JSON.stringify(next.schedule.days)
+        );
+      });
+    }
+
+    record.notifiedToday = notified;
     await this.ctx.storage.put(key, record);
     await this.ensureAlarm();
   }
@@ -97,6 +117,30 @@ export class MutaleeScheduler extends DurableObject {
   async removeRecord(deviceId) {
     await this.ctx.storage.delete(`rec:${deviceId}`);
     await this.ensureAlarm();
+  }
+
+  // 운영 확인용: 저장된 기기·규칙·다음 알람 시각 요약 (구독 키 같은 민감값은 빼고).
+  async debugState() {
+    const records = await this.ctx.storage.list({ prefix: 'rec:' });
+    const alarm = await this.ctx.storage.getAlarm();
+    const devices = [];
+    for (const [key, record] of records) {
+      devices.push({
+        key,
+        updatedAt: record.updatedAt ? new Date(record.updatedAt).toISOString() : null,
+        timezone: record.timezone,
+        endpointHost: record.subscription && record.subscription.endpoint ? new URL(record.subscription.endpoint).host : null,
+        notifiedToday: record.notifiedToday,
+        rules: (record.rules || []).map((r) => ({
+          id: r.id,
+          title: r.title,
+          time: r.schedule && r.schedule.time,
+          days: r.schedule && r.schedule.days,
+          enabled: r.enabled,
+        })),
+      });
+    }
+    return { now: new Date().toISOString(), nextAlarm: alarm ? new Date(alarm).toISOString() : null, devices };
   }
 
   // 모든 기기·규칙을 통틀어 가장 이른 다음 도래 시각으로 알람을 설정한다.
@@ -160,8 +204,17 @@ export class MutaleeScheduler extends DurableObject {
     let changed = false;
     let needRetry = false;
 
+    const offset = tzOffsetMs(timezone, new Date());
+    const local = new Date(Date.now() + offset);
+
     for (const reminder of due) {
       if (notified.ids.includes(reminder.id)) continue;
+
+      // 도래한 지 GRACE_MS 넘게 지난 알람은 건너뛴다 (구독 직후 과거 알람 몰아치기 방지).
+      const [hh, mm] = reminder.schedule.time.split(':').map(Number);
+      const dueTs = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), hh, mm, 0) - offset;
+      if (Date.now() - dueTs > GRACE_MS) continue;
+
       try {
         await sendPush(
           this.env,
@@ -208,6 +261,12 @@ export default {
   // 그 외 접속(사용자가 주소를 직접 열었을 때)은 앱으로 리다이렉트.
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (request.method === 'GET' && url.pathname === '/debug') {
+      if (request.headers.get('x-sync-token') !== env.SYNC_TOKEN) {
+        return new Response('unauthorized', { status: 401 });
+      }
+      return Response.json(await schedulerStub(env).debugState());
+    }
     if (request.method === 'POST' && (url.pathname === '/sync' || url.pathname === '/unsubscribe')) {
       if (request.headers.get('x-sync-token') !== env.SYNC_TOKEN) {
         return new Response('unauthorized', { status: 401 });

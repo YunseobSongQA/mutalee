@@ -51,53 +51,76 @@ export function setNotifyEnabled(enabled) {
 // 앱이 열려 있는 동안은 여기서 즉시(30초 주기) 쏜다 — 정시성이 중요해서 서버 푸시(1분 주기 cron)를
 // 기다리지 않는다. 앱이 열려 있을 때 서버 푸시가 중복으로 뜨는 건 sw.js의 push 핸들러가
 // "지금 포커스된 창이 있으면" 억제해서 막는다 (그래서 여기선 구독 여부를 신경 안 써도 됨).
+// 도래 후 이만큼 지난 알람은 띄우지 않는다 (앱을 나중에 열었을 때 과거 알람 몰아치기 방지).
+const GRACE_MS = 5 * 60 * 1000;
+
+// iOS는 페이지에서 new Notification() 생성이 안 된다 (생성자 호출 시 예외 → 알림이 아예 안 떴음).
+// 서비스워커의 showNotification은 iOS에서도 동작하므로 그걸 우선 쓴다.
+// 클릭하면 sw.js의 notificationclick이 전체 문구 모달을 띄운다 (푸시 알림과 같은 경로).
+async function showLocalNotification(title, body, onOpen) {
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(title, {
+        body,
+        icon: './icons/icon.svg',
+        badge: './icons/icon.svg',
+        data: { title, body },
+      });
+      return true;
+    } catch (e) {
+      // 아래 생성자 방식으로 대체
+    }
+  }
+  try {
+    const notification = new Notification(title, { body });
+    // OS가 문구를 잘라서 보여주므로, 누르면 앱에서 전체 문구를 볼 수 있게 한다.
+    if (typeof onOpen === 'function') {
+      notification.onclick = () => {
+        window.focus();
+        onOpen(title, body);
+      };
+    }
+    return true;
+  } catch (e) {
+    return false; // 이 기기에선 표시 수단이 없음
+  }
+}
+
 export async function checkAndNotify(rules, profile, personas, dateSeed, onOpen) {
   if (!isNotifyEnabled() || getPermission() !== 'granted') return;
 
-  const due = getDueReminders(rules, new Date());
+  const now = new Date();
+  const due = getDueReminders(rules, now);
   const notified = loadNotifiedToday(dateSeed);
 
   for (const reminder of due) {
     if (notified.ids.includes(reminder.id)) continue;
+
+    const [hh, mm] = reminder.schedule.time.split(':').map(Number);
+    const dueAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+    if (now - dueAt > GRACE_MS) continue;
+
     const body = renderMessage(reminder, profile, personas);
-
-    // iOS는 페이지에서 new Notification() 생성이 안 된다 (생성자 호출 시 예외 → 알림이 아예 안 떴음).
-    // 서비스워커의 showNotification은 iOS에서도 동작하므로 그걸 우선 쓴다.
-    // 클릭하면 sw.js의 notificationclick이 전체 문구 모달을 띄운다 (푸시 알림과 같은 경로).
-    let shown = false;
-    if ('serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        await registration.showNotification(reminder.title, {
-          body,
-          icon: './icons/icon.svg',
-          badge: './icons/icon.svg',
-          data: { title: reminder.title, body },
-        });
-        shown = true;
-      } catch (e) {
-        // 아래 생성자 방식으로 대체
-      }
-    }
-
-    if (!shown) {
-      try {
-        const notification = new Notification(reminder.title, { body });
-        // OS가 문구를 잘라서 보여주므로, 누르면 앱에서 전체 문구를 볼 수 있게 한다.
-        if (typeof onOpen === 'function') {
-          notification.onclick = () => {
-            window.focus();
-            onOpen(reminder.title, body);
-          };
-        }
-        shown = true;
-      } catch (e) {
-        // 이 기기에선 표시 수단이 없음 — 다음 체크에서 재시도되도록 notified에 넣지 않는다
-      }
-    }
-
+    const shown = await showLocalNotification(reminder.title, body, onOpen);
     if (shown) markNotified(dateSeed, reminder.id);
   }
+}
+
+// 알림을 처음 켰을 때 무탈이의 따뜻한 인사를 한 번 보낸다.
+// "알림이 진짜 오는구나"를 바로 확인시켜주는 역할도 겸한다.
+const WELCOMED_KEY = 'mutalee.welcomed';
+
+export async function sendWelcomeIfFirst(name) {
+  if (localStorage.getItem(WELCOMED_KEY)) return;
+  if (!isNotifyEnabled() || getPermission() !== 'granted') return;
+
+  const who = name && name !== '사용자' ? `${name}님` : '반가운 분';
+  const shown = await showLocalNotification(
+    '무탈이',
+    `${who}, 안녕하세요! 무탈이예요 🙂 이제 정해둔 시각마다 제가 잊지 않고 챙겨드릴게요. 오늘도 무리하지 말고, 무탈하게!`
+  );
+  if (shown) localStorage.setItem(WELCOMED_KEY, 'true');
 }
 
 // ==== 서버 웹푸시 구독 ====

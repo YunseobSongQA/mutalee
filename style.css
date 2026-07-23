@@ -238,3 +238,15 @@ form.rule-form textarea {
   flex: 1;
   padding: 6px 10px;
 }
+
+/* 저장 직후 "N분 뒤 알람" 안내 토스트: 떠 있는 요소라 가독용 배경만 유지 */
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 24px;
+  background: #3a3a3a;
+  color: #fff;
+  padding: 10px 16px;
+  z-index: 200;
+}

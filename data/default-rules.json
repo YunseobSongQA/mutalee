@@ -1,29 +1,12 @@
 [
   {
-    "id": "mental-declutter",
+    "id": "mutalee-hello",
     "category": "mental",
-    "persona": "philosopher",
-    "title": "정리할 시간",
-    "message": "필요 없는 것들 정리하기",
-    "schedule": { "days": [0], "time": "10:00" },
-    "enabled": true
-  },
-  {
-    "id": "stock-check",
-    "category": "stock",
-    "persona": "secretary",
-    "title": "주식 확인",
-    "message": "주식 확인, 딱 지금만 보고 나오기",
-    "schedule": { "days": [1, 2, 3, 4, 5], "time": "09:05" },
-    "enabled": true
-  },
-  {
-    "id": "relationship-remember",
-    "category": "relationship",
-    "persona": "parent",
-    "title": "소중함을 잊지 않기",
-    "message": "연인을 좋아했던 이유 떠올리기",
-    "schedule": { "days": [3], "time": "21:00" },
+    "persona": "culture",
+    "title": "무탈이의 아침 인사",
+    "message": "오늘 하루도 무탈하게 보내기",
+    "generatedMessage": "좋은 아침이에요! 무탈이예요 🙂 오늘도 서두르지 말고, 무리하지 말고, 무탈하게. 제가 옆에서 챙길게요.",
+    "schedule": { "days": [0, 1, 2, 3, 4, 5, 6], "time": "09:00" },
     "enabled": true
   }
 ]

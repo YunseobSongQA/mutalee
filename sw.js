@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mutalee-v14';
+const CACHE_NAME = 'mutalee-v15';
 const ASSETS = [
   './',
   './index.html',

@@ -8,6 +8,7 @@ import {
   toggleRule,
   loadProfile,
   saveProfile,
+  unmarkNotified,
   generateMessage,
   renderReminderList,
   renderRuleForm,
@@ -28,6 +29,7 @@ import {
   syncToServer,
   getExistingSubscription,
   renderNoticeBanner,
+  sendWelcomeIfFirst,
 } from './notify.js';
 
 function dateSeedOf(date) {
@@ -39,6 +41,36 @@ function dateSeedOf(date) {
 
 function generateId() {
   return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// 저장 직후 "몇 분 뒤 알람이 울려요"를 알려주는 문구. 오늘 도래분이 없으면 다음 요일로 안내.
+function describeNextRing(schedule) {
+  const now = new Date();
+  const [hh, mm] = schedule.time.split(':').map(Number);
+  const DAY = ['일', '월', '화', '수', '목', '금', '토'];
+  for (let add = 0; add <= 7; add++) {
+    const cand = new Date(now.getFullYear(), now.getMonth(), now.getDate() + add, hh, mm, 0, 0);
+    if (!schedule.days.includes(cand.getDay()) || cand <= now) continue;
+    const diffMin = Math.round((cand - now) / 60000);
+    if (diffMin < 1) return '곧 알람이 울려요';
+    if (diffMin < 60) return `${diffMin}분 뒤에 알람이 울려요`;
+    if (add === 0) return `${Math.floor(diffMin / 60)}시간 ${diffMin % 60}분 뒤에 알람이 울려요`;
+    return `${add === 1 ? '내일' : DAY[cand.getDay()] + '요일'} ${schedule.time}에 알람이 울려요`;
+  }
+  return null;
+}
+
+let toastTimer = null;
+function showToast(text) {
+  let el = document.querySelector('.toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 4000);
 }
 
 const listEl = document.getElementById('reminder-list');
@@ -95,6 +127,8 @@ function render() {
       });
       render();
       syncPushIfSubscribed();
+      const nextRing = describeNextRing(rule.schedule);
+      if (nextRing) showToast(`🔔 ${nextRing}`);
     },
     editingId: editingRuleId,
     renderEditor: (slot, rule) => {
@@ -129,11 +163,14 @@ async function submitRule(data, editingRule, form) {
     personaLabel,
     name: profile.name,
     tone: profile.tone,
+    target: data.target,
   });
   if (generated) data.generatedMessage = generated;
 
   if (editingRule) {
     rules = updateRule(rules, editingRule.id, data);
+    // 시각을 바꿨을 수 있으니 "오늘 이미 울렸음" 기록을 지운다 (안 지우면 새 시각에 안 울림).
+    unmarkNotified(dateSeedOf(new Date()), editingRule.id);
     editingRuleId = null;
   } else {
     rules = addRule(rules, { id: generateId(), enabled: true, ...data });
@@ -141,6 +178,8 @@ async function submitRule(data, editingRule, form) {
   closeForm();
   render();
   syncPushIfSubscribed();
+  const nextRing = describeNextRing(data.schedule);
+  if (nextRing) showToast(`🔔 ${nextRing}`);
 }
 
 function openForm() {
@@ -171,6 +210,7 @@ addRuleBtn.addEventListener('click', () => {
 function renderBanner() {
   renderNoticeBanner(noticeEl, {
     onEnabled: () => {
+      sendWelcomeIfFirst(profile.name);
       runNotifyCheck();
       trySubscribe();
     },

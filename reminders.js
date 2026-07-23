@@ -34,7 +34,11 @@ export function renderMessage(reminder, profile, personas) {
 
   const persona = (personas || []).find((p) => p.id === reminder.persona);
   const template = persona && persona.template ? persona.template : '{note}';
-  const tokens = { name: (profile && profile.name) || '사용자', note: reminder.message };
+  const tokens = {
+    name: (profile && profile.name) || '사용자',
+    note: reminder.target ? `${reminder.target} — ${reminder.message}` : reminder.message,
+    target: reminder.target || '',
+  };
   return template.replace(/\{(\w+)\}/g, (match, key) => (tokens[key] != null ? tokens[key] : match));
 }
 
@@ -108,15 +112,23 @@ export function markNotified(dateSeed, id) {
   return data;
 }
 
+// 알람 시각을 수정하면 "오늘 이미 울렸음" 기록을 지워야 새 시각에 다시 울릴 수 있다.
+export function unmarkNotified(dateSeed, id) {
+  const data = loadNotifiedToday(dateSeed);
+  data.ids = data.ids.filter((x) => x !== id);
+  localStorage.setItem(NOTIFIED_KEY, JSON.stringify(data));
+  return data;
+}
+
 // 서버(Gemini)에 문구 생성 요청. 실패하면 조용히 null (호출부가 템플릿으로 대체).
 // 한 번 실패하면 Gemini가 가끔 일시적으로 과부하 상태라 1번만 재시도한다.
-export async function generateMessage({ note, personaLabel, name, tone }) {
+export async function generateMessage({ note, personaLabel, name, tone, target }) {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const res = await fetch('/api/generate-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note, personaLabel, name, tone }),
+        body: JSON.stringify({ note, personaLabel, name, tone, target }),
       });
       if (!res.ok) continue;
       const data = await res.json();
@@ -186,7 +198,8 @@ export function renderReminderList(container, todaysReminders, categories, perso
 
     const meta = document.createElement('div');
     meta.className = 'reminder-meta';
-    meta.textContent = `${labelOf(categories, reminder.category)} · ${labelOf(personas, reminder.persona)} · ${daysToText(reminder.schedule.days)}`;
+    const targetPart = reminder.target ? `${reminder.target} · ` : '';
+    meta.textContent = `${targetPart}${labelOf(categories, reminder.category)} · ${labelOf(personas, reminder.persona)} · ${daysToText(reminder.schedule.days)}`;
     body.appendChild(meta);
 
     card.appendChild(body);
@@ -297,6 +310,15 @@ export function renderRuleForm(container, categories, personas, handlers, editin
   titleField.appendChild(titleInput);
   form.appendChild(titleField);
 
+  const targetField = document.createElement('div');
+  targetField.innerHTML = '<label>대상 (선택)</label>';
+  const targetInput = document.createElement('input');
+  targetInput.type = 'text';
+  targetInput.name = 'target';
+  targetInput.placeholder = '예: 제인이, 나 자신, 우리 팀';
+  targetField.appendChild(targetInput);
+  form.appendChild(targetField);
+
   const messageField = document.createElement('div');
   messageField.innerHTML = '<label>메모 (대충 적어도 돼요, 문구는 페르소나가 알아서 만들어요)</label>';
   const messageInput = document.createElement('textarea');
@@ -363,6 +385,7 @@ export function renderRuleForm(container, categories, personas, handlers, editin
     categorySelect.value = editingRule.category;
     personaSelect.value = editingRule.persona;
     titleInput.value = editingRule.title;
+    targetInput.value = editingRule.target || '';
     messageInput.value = editingRule.message;
     timeInput.value = editingRule.schedule.time;
     editingRule.schedule.days.forEach((d) => {
@@ -403,6 +426,7 @@ export function renderRuleForm(container, categories, personas, handlers, editin
         category: categorySelect.value,
         persona: personaSelect.value,
         title: titleInput.value,
+        target: targetInput.value.trim(),
         message: messageInput.value,
         schedule: { days, time: timeInput.value },
       },

@@ -11,13 +11,14 @@ export async function onRequestPost({ request, env }) {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const { note, personaLabel, name, tone } = payload;
+  const { note, personaLabel, name, tone, target } = payload;
   if (!note) {
     return new Response('Missing note', { status: 400 });
   }
 
   const toneLine = tone ? `전체적인 말투 컨셉: ${tone}.` : '';
-  const prompt = `너는 알림 문구 작가야. 아래 메모를 "${personaLabel || '비서'}" 캐릭터의 말투로, 사용자 이름 "${name || '사용자'}"을 자연스럽게 넣어서 완성된 알림 문구로 바꿔줘. ${toneLine}
+  const targetLine = target ? `이 알림이 다루는 대상: ${target}. 대상을 문구에 자연스럽게 녹여줘.` : '';
+  const prompt = `너는 알림 문구 작가야. 아래 메모를 "${personaLabel || '비서'}" 캐릭터의 말투로, 사용자 이름 "${name || '사용자'}"을 자연스럽게 넣어서 완성된 알림 문구로 바꿔줘. ${toneLine} ${targetLine}
 글자 수 제한은 없으니 짧게 줄이려고 애쓰지 말고, 그 캐릭터라면 진짜 할 법한 자연스러운 문장으로 써.
 문구만 출력하고 설명이나 따옴표는 붙이지 마.
 
