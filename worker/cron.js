@@ -5,9 +5,9 @@
 // 지원해서 iOS Safari(aes128gcm, RFC 8188만 지원)에서 푸시가 조용히 안 뜨는 문제가 있었다.
 // web-push-neo로 교체 — aes128gcm만 지원하고 Safari 16+ 포함 모든 최신 브라우저와 호환된다.
 import { sendNotification } from 'web-push-neo';
-import { getDueReminders, renderMessage } from '../public/reminders/core.js';
-import personas from '../public/data/personas.json';
-import pushConfig from '../public/data/push-config.json';
+import { getDueReminders, renderMessage } from '../reminders/core.js';
+import personas from '../data/personas.json';
+import pushConfig from '../data/push-config.json';
 
 function zonedNow(timeZone) {
   const parts = new Intl.DateTimeFormat('en-US', {
