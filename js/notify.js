@@ -1,8 +1,7 @@
-// 알림 기능 전체: 브라우저 권한, 로컬 포그라운드 알림, 서버 웹푸시 구독.
-// (예전엔 permission.js/push-client.js로 쪼개져 있었는데 전부 "알림"이라는 한 기능이라 여기로 합침)
+// 알림 기능 전부: 권한·앱 내 스위치·포그라운드 알림·웹푸시 구독 + 상태 배너 화면.
+// (구 notify/notify.js + notify/ui.js)
 
-import { getDueReminders, renderMessage } from '../reminders/core.js';
-import { loadNotifiedToday, markNotified } from '../reminders/store.js';
+import { getDueReminders, renderMessage, loadNotifiedToday, markNotified } from './reminders.js';
 
 const ENABLED_KEY = 'mutalee.notify-enabled';
 const DEVICE_ID_KEY = 'mutalee.device-id';
@@ -19,7 +18,7 @@ function getDeviceId() {
   return id;
 }
 
-// ---- 브라우저 알림 권한 ----
+// ==== 브라우저 알림 권한 ====
 
 export function isSupported() {
   return typeof Notification !== 'undefined';
@@ -35,7 +34,7 @@ export async function requestPermission() {
   return Notification.requestPermission();
 }
 
-// ---- 앱 안에서 켜고 끄는 전체 알림 스위치 ----
+// ==== 앱 안에서 켜고 끄는 전체 알림 스위치 ====
 // (iOS 권한(Notification.permission)은 앱이 되돌릴 수 없어서, 그거랑 별개로
 // "사용자가 앱에서 알림을 원하는가"를 따로 저장해서 실제 켜기/끄기가 되게 한다.)
 
@@ -48,7 +47,7 @@ export function setNotifyEnabled(enabled) {
   localStorage.setItem(ENABLED_KEY, String(enabled));
 }
 
-// ---- 로컬 포그라운드 알림 ----
+// ==== 로컬 포그라운드 알림 ====
 // 앱이 열려 있는 동안은 여기서 즉시(30초 주기) 쏜다 — 정시성이 중요해서 서버 푸시(1분 주기 cron)를
 // 기다리지 않는다. 앱이 열려 있을 때 서버 푸시가 중복으로 뜨는 건 sw.js의 push 핸들러가
 // "지금 포커스된 창이 있으면" 억제해서 막는다 (그래서 여기선 구독 여부를 신경 안 써도 됨).
@@ -73,7 +72,7 @@ export async function checkAndNotify(rules, profile, personas, dateSeed, onOpen)
   });
 }
 
-// ---- 서버 웹푸시 구독 ----
+// ==== 서버 웹푸시 구독 ====
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -132,4 +131,53 @@ export async function syncToServer(subscription, rules, profile) {
   } catch (e) {
     // 서버 동기화 실패는 조용히 무시 (로컬 알림은 그대로 동작)
   }
+}
+
+// ==== 화면: 알림 상태 배너 ====
+// 지원 여부/권한/켜짐 상태에 따라 문구와 켜기·끄기 버튼을 그린다.
+// onEnabled: 알림을 막 켰을 때 앱이 이어서 할 일(즉시 체크 + 푸시 구독)을 받아온다.
+export function renderNoticeBanner(container, { onEnabled } = {}) {
+  container.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'notice-banner';
+
+  const statusLine = document.createElement('p');
+  statusLine.className = 'notice-status';
+  box.appendChild(statusLine);
+
+  if (!isSupported()) {
+    statusLine.textContent = '🔕 이 브라우저는 알림 기능을 지원하지 않아요.';
+  } else {
+    const status = getPermission();
+    if (status === 'denied') {
+      statusLine.textContent = '🔕 알림이 차단되어 있어요.';
+      const off = document.createElement('p');
+      off.className = 'notice-sub';
+      off.textContent = '켜려면 iOS 설정 > 알림 > 무탈이에서 허용해주세요.';
+      box.appendChild(off);
+    } else if (status === 'granted' && isNotifyEnabled()) {
+      statusLine.textContent = '🔔 알림 켜짐 — 앱이 꺼져 있어도 알림이 옵니다.';
+      const btn = document.createElement('button');
+      btn.textContent = '알림 끄기';
+      btn.onclick = async () => {
+        setNotifyEnabled(false);
+        await unsubscribe();
+        renderNoticeBanner(container, { onEnabled });
+      };
+      box.appendChild(btn);
+    } else {
+      statusLine.textContent = '🔕 알림 꺼짐';
+      const btn = document.createElement('button');
+      btn.textContent = '알림 켜기';
+      btn.onclick = async () => {
+        setNotifyEnabled(true);
+        if (getPermission() !== 'granted') await requestPermission();
+        renderNoticeBanner(container, { onEnabled });
+        if (typeof onEnabled === 'function') onEnabled();
+      };
+      box.appendChild(btn);
+    }
+  }
+
+  container.appendChild(box);
 }

@@ -1,5 +1,6 @@
-import { getTodaysReminders } from './reminders/core.js';
+// 화면 연결만 담당하는 진입점. 기능별 코드는 js/기능이름.js 하나씩에 모여 있다.
 import {
+  getTodaysReminders,
   loadRules,
   addRule,
   updateRule,
@@ -8,11 +9,17 @@ import {
   loadProfile,
   saveProfile,
   generateMessage,
-} from './reminders/store.js';
-import { renderReminderList, renderRuleForm, openMessageModal } from './reminders/ui.js';
-import { pickDaily } from './culture/core.js';
-import { renderCultureCard } from './culture/ui.js';
-import { loadCultureOverride, saveCultureOverride, generateCulture } from './culture/store.js';
+  renderReminderList,
+  renderRuleForm,
+  openMessageModal,
+} from './js/reminders.js';
+import {
+  pickDaily,
+  loadCultureOverride,
+  saveCultureOverride,
+  generateCulture,
+  renderCultureCard,
+} from './js/culture.js';
 import {
   checkAndNotify,
   getPermission,
@@ -20,8 +27,8 @@ import {
   subscribe,
   syncToServer,
   getExistingSubscription,
-} from './notify/notify.js';
-import { renderNoticeBanner } from './notify/ui.js';
+  renderNoticeBanner,
+} from './js/notify.js';
 
 function dateSeedOf(date) {
   const y = date.getFullYear();

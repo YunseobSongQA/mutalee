@@ -1,3 +1,135 @@
+// 노티(리마인더) 기능 전부: 순수 로직 → localStorage/서버 → 화면 순서로 배치.
+// (구 reminders/core.js + store.js + ui.js)
+
+// ==== 순수 로직: DOM/저장소/네트워크를 건드리지 않는다 (worker/cron.js도 이 부분을 재사용) ====
+
+
+function toHHMM(date) {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+// 오늘 요일에 해당하는 규칙 전체 (시각 상관없이), 시각순 정렬
+export function getTodaysReminders(rules, now) {
+  const day = now.getDay();
+  return rules
+    .filter((r) => r.enabled && r.schedule.days.includes(day))
+    .slice()
+    .sort((a, b) => a.schedule.time.localeCompare(b.schedule.time));
+}
+
+// 지금 시점(오늘, 이미 시각이 도래한 것)에 해당하는 노티만 골라냄
+export function getDueReminders(rules, now) {
+  const nowHHMM = toHHMM(now);
+  return getTodaysReminders(rules, now).filter(
+    (r) => r.schedule.time <= nowHHMM
+  );
+}
+
+// reminder.message는 사용자가 대충 적은 메모다. generatedMessage(Gemini 생성 결과)가 있으면 그걸 쓰고,
+// 없으면 페르소나 템플릿에 끼워서 완성된 문구로 만든다.
+export function renderMessage(reminder, profile, personas) {
+  if (reminder.generatedMessage) return reminder.generatedMessage;
+
+  const persona = (personas || []).find((p) => p.id === reminder.persona);
+  const template = persona && persona.template ? persona.template : '{note}';
+  const tokens = { name: (profile && profile.name) || '사용자', note: reminder.message };
+  return template.replace(/\{(\w+)\}/g, (match, key) => (tokens[key] != null ? tokens[key] : match));
+}
+
+// ==== 저장/서버: localStorage 읽기·쓰기 + 서버(Gemini) 문구 생성 요청 ====
+
+
+const RULES_KEY = 'mutalee.rules';
+const PROFILE_KEY = 'mutalee.profile';
+const NOTIFIED_KEY = 'mutalee.notified';
+
+export async function loadRules() {
+  const raw = localStorage.getItem(RULES_KEY);
+  if (raw) return JSON.parse(raw);
+  const res = await fetch('data/default-rules.json');
+  const seed = await res.json();
+  saveRules(seed);
+  return seed;
+}
+
+export function saveRules(rules) {
+  localStorage.setItem(RULES_KEY, JSON.stringify(rules));
+}
+
+export function addRule(rules, rule) {
+  const next = rules.concat(rule);
+  saveRules(next);
+  return next;
+}
+
+export function updateRule(rules, id, patch) {
+  const next = rules.map((r) => (r.id === id ? { ...r, ...patch } : r));
+  saveRules(next);
+  return next;
+}
+
+export function deleteRule(rules, id) {
+  const next = rules.filter((r) => r.id !== id);
+  saveRules(next);
+  return next;
+}
+
+export function toggleRule(rules, id) {
+  const next = rules.map((r) =>
+    r.id === id ? { ...r, enabled: !r.enabled } : r
+  );
+  saveRules(next);
+  return next;
+}
+
+export function loadProfile() {
+  const raw = localStorage.getItem(PROFILE_KEY);
+  return raw ? JSON.parse(raw) : { name: '사용자' };
+}
+
+export function saveProfile(profile) {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+}
+
+// 오늘 이미 알림을 쏜 규칙 id 목록 (날짜 바뀌면 자동 초기화)
+export function loadNotifiedToday(dateSeed) {
+  const raw = localStorage.getItem(NOTIFIED_KEY);
+  const data = raw ? JSON.parse(raw) : { date: dateSeed, ids: [] };
+  if (data.date !== dateSeed) return { date: dateSeed, ids: [] };
+  return data;
+}
+
+export function markNotified(dateSeed, id) {
+  const data = loadNotifiedToday(dateSeed);
+  if (!data.ids.includes(id)) data.ids.push(id);
+  localStorage.setItem(NOTIFIED_KEY, JSON.stringify(data));
+  return data;
+}
+
+// 서버(Gemini)에 문구 생성 요청. 실패하면 조용히 null (호출부가 템플릿으로 대체).
+// 한 번 실패하면 Gemini가 가끔 일시적으로 과부하 상태라 1번만 재시도한다.
+export async function generateMessage({ note, personaLabel, name, tone }) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch('/api/generate-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note, personaLabel, name, tone }),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.message) return data.message;
+    } catch (e) {
+      // 다음 시도로 넘어감
+    }
+  }
+  return null;
+}
+
+// ==== 화면: 노티 목록·추가/수정 폼·전체 문구 모달 ====
+
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
 function labelOf(list, id) {
