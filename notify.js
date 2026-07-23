@@ -57,19 +57,47 @@ export async function checkAndNotify(rules, profile, personas, dateSeed, onOpen)
   const due = getDueReminders(rules, new Date());
   const notified = loadNotifiedToday(dateSeed);
 
-  due.forEach((reminder) => {
-    if (notified.ids.includes(reminder.id)) return;
+  for (const reminder of due) {
+    if (notified.ids.includes(reminder.id)) continue;
     const body = renderMessage(reminder, profile, personas);
-    const notification = new Notification(reminder.title, { body });
-    // OS가 문구를 잘라서 보여주므로, 누르면 앱에서 전체 문구를 볼 수 있게 한다.
-    if (typeof onOpen === 'function') {
-      notification.onclick = () => {
-        window.focus();
-        onOpen(reminder.title, body);
-      };
+
+    // iOS는 페이지에서 new Notification() 생성이 안 된다 (생성자 호출 시 예외 → 알림이 아예 안 떴음).
+    // 서비스워커의 showNotification은 iOS에서도 동작하므로 그걸 우선 쓴다.
+    // 클릭하면 sw.js의 notificationclick이 전체 문구 모달을 띄운다 (푸시 알림과 같은 경로).
+    let shown = false;
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(reminder.title, {
+          body,
+          icon: './icons/icon.svg',
+          badge: './icons/icon.svg',
+          data: { title: reminder.title, body },
+        });
+        shown = true;
+      } catch (e) {
+        // 아래 생성자 방식으로 대체
+      }
     }
-    markNotified(dateSeed, reminder.id);
-  });
+
+    if (!shown) {
+      try {
+        const notification = new Notification(reminder.title, { body });
+        // OS가 문구를 잘라서 보여주므로, 누르면 앱에서 전체 문구를 볼 수 있게 한다.
+        if (typeof onOpen === 'function') {
+          notification.onclick = () => {
+            window.focus();
+            onOpen(reminder.title, body);
+          };
+        }
+        shown = true;
+      } catch (e) {
+        // 이 기기에선 표시 수단이 없음 — 다음 체크에서 재시도되도록 notified에 넣지 않는다
+      }
+    }
+
+    if (shown) markNotified(dateSeed, reminder.id);
+  }
 }
 
 // ==== 서버 웹푸시 구독 ====

@@ -88,6 +88,7 @@ async function processSubscriber(env, keyName) {
         reminder.title,
         renderMessage(reminder, record.profile || { name: '사용자' }, personas)
       );
+      console.log(`발송 완료: ${keyName} / ${reminder.id} (${reminder.schedule.time}) at ${new Date().toISOString()}`);
       notified.ids.push(reminder.id);
       changed = true;
     } catch (err) {
@@ -122,11 +123,16 @@ export default {
   // 발송 시점엔 만들 게 없다. (대기는 wall time이라 CPU 한도와 무관, 중복은 notifiedToday로 방지)
   async scheduled(event, env, ctx) {
     const keyNames = await readSubIndex(env);
+    console.log(`1차(즉시): ${new Date().toISOString()}, 구독 ${keyNames.length}개`);
     await processAll(env, keyNames);
 
     const msToNextMinute = 60000 - (Date.now() % 60000);
     await new Promise((resolve) => setTimeout(resolve, msToNextMinute + 200));
-    await processAll(env, keyNames);
+    // 대기하는 사이 새 기기가 구독했을 수 있으니 인덱스를 다시 읽는다
+    // (KV 전파 지연은 어쩔 수 없지만, 30초 전 목록을 재사용하는 손해는 없앤다).
+    const freshKeyNames = await readSubIndex(env);
+    console.log(`2차(정각): ${new Date().toISOString()}, 구독 ${freshKeyNames.length}개`);
+    await processAll(env, freshKeyNames);
   },
 };
 
